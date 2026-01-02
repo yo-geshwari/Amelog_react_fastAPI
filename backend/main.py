@@ -1,9 +1,18 @@
 from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 import cv2
 from keras.models import model_from_json
 
 app = FastAPI(title="AmeLog Emotion API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 with open("models/emotion_model.json", "r") as f:
     model_json = f.read()
