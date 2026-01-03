@@ -1,13 +1,68 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 
 function App() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
   const [snapshot, setSnapshot] = useState(null);
-  const [emotion, setEmotion] = useState("—");
-  const [confidence, setConfidence] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const EMOTION_WINDOW = 5;
+  const [emotionHistory, setEmotionHistory] = useState([]);
+
+  const emotionToMusicMap = {
+    Happy: {
+      mood: "Upbeat & Energetic",
+      genres: ["Pop", "Dance", "Indie Pop"],
+      tempo: "Fast",
+      description: "Feel-good tracks to amplify positive energy",
+    },
+    Sad: {
+      mood: "Calm & Reflective",
+      genres: ["Acoustic", "Lo-fi", "Soft Indie"],
+      tempo: "Slow",
+      description: "Soothing music for emotional comfort",
+    },
+    Angry: {
+      mood: "Intense & Powerful",
+      genres: ["Rock", "Metal", "Hip-Hop"],
+      tempo: "Fast",
+      description: "High-energy tracks for emotional release",
+    },
+    Fear: {
+      mood: "Grounding & Reassuring",
+      genres: ["Ambient", "Instrumental", "Soft Classical"],
+      tempo: "Slow",
+      description: "Music to reduce anxiety and stabilize mood",
+    },
+    Surprise: {
+      mood: "Playful & Dynamic",
+      genres: ["Electronic", "Alt Pop", "Experimental"],
+      tempo: "Medium",
+      description: "Unpredictable sounds matching heightened alertness",
+    },
+    Neutral: {
+      mood: "Balanced & Focused",
+      genres: ["Lo-fi", "Chillhop", "Jazz"],
+      tempo: "Medium",
+      description: "Background music for focus and continuity",
+    },
+  };
+
+  const stableEmotion = useMemo(() => {
+    if (emotionHistory.length === 0) return "—";
+
+    const counts = {};
+    emotionHistory.forEach(e => {
+      counts[e] = (counts[e] || 0) + 1;
+    });
+
+    return Object.keys(counts).reduce((a, b) =>
+      counts[a] > counts[b] ? a : b
+    );
+  }, [emotionHistory]);
+
+  const musicContext = emotionToMusicMap[stableEmotion] || null;
 
   // Start webcam
   useEffect(() => {
@@ -35,16 +90,19 @@ function App() {
     canvas.height = video.videoHeight;
 
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Show snapshot
+    ctx.save();
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
     canvas.toBlob(async (blob) => {
       if (!blob) return;
 
       const imageUrl = URL.createObjectURL(blob);
       setSnapshot(imageUrl);
 
-      // Send to backend
       await sendToBackend(blob);
     }, "image/jpeg");
   };
@@ -68,8 +126,11 @@ function App() {
       const data = await response.json();
 
       if (data.emotion) {
-        setEmotion(data.emotion);
-        setConfidence(data.confidence);
+        setEmotionHistory(prev => {
+          const updated = [...prev, data.emotion];
+          if (updated.length > EMOTION_WINDOW) updated.shift();
+          return updated;
+        });
       }
     } catch (error) {
       console.error("Error calling backend:", error);
@@ -92,7 +153,7 @@ function App() {
   return (
     <div style={{ padding: "20px" }}>
       <h1>AmeLog 🎵</h1>
-      <p>Real-time emotion sampling (frontend-controlled)</p>
+      <p>Real-time emotion sampling</p>
 
       <video
         ref={videoRef}
@@ -102,6 +163,7 @@ function App() {
           width: "400px",
           borderRadius: "12px",
           border: "2px solid #ccc",
+          transform: "scaleX(-1)",
         }}
       />
 
@@ -113,17 +175,21 @@ function App() {
           <img
             src={snapshot}
             alt="Snapshot"
-            style={{ width: "200px", borderRadius: "8px" }}
+            style={{ width: "200px", borderRadius: "8px"}}
           />
         </div>
       )}
 
       <div style={{ marginTop: "20px" }}>
-        <h2>
-          Emotion: <span>{emotion}</span>
-        </h2>
-        {confidence !== null && (
-          <p>Confidence: {confidence}</p>
+        <h2>Emotion: {stableEmotion}</h2>
+        {musicContext && (
+          <div style={{ marginTop: "20px" }}>
+            <h3>🎵 Music Recommendation</h3>
+            <p><strong>Mood:</strong> {musicContext.mood}</p>
+            <p><strong>Genres:</strong> {musicContext.genres.join(", ")}</p>
+            <p><strong>Tempo:</strong> {musicContext.tempo}</p>
+            <p style={{ fontStyle: "italic" }}>{musicContext.description}</p>
+          </div>
         )}
       </div>
     </div>
