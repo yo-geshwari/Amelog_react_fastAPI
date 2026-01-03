@@ -10,6 +10,11 @@ function App() {
   const EMOTION_WINDOW = 5;
   const [emotionHistory, setEmotionHistory] = useState([]);
 
+  const audioRef = useRef(null);
+  const currentPlaylistRef = useRef([]);
+  const currentTrackIndexRef = useRef(0);
+  const pendingEmotionRef = useRef(null);
+
   const emotionToMusicMap = {
     Happy: {
       mood: "Upbeat & Energetic",
@@ -47,6 +52,34 @@ function App() {
       tempo: "Medium",
       description: "Background music for focus and continuity",
     },
+  };
+
+  const emotionPlaylists = {
+    Happy: [
+      "/audio/happy/happy1.mp3",
+      "/audio/happy/happy2.mp3",
+      "/audio/happy/happy3.mp3",
+    ],
+    Sad: [
+      "/audio/sad/sad1.mp3",
+      "/audio/sad/sad2.mp3",
+    ],
+    Neutral: [
+      "/audio/neutral/neutral1.mp3",
+      "/audio/neutral/neutral2.mp3",
+    ],
+    Angry: [
+      "/audio/angry/angry1.mp3",
+      "/audio/angry/angry2.mp3",
+    ],
+    Fear: [
+      "/audio/fear/fear1.mp3",
+      "/audio/fear/fear2.mp3",
+    ],
+    Surprise: [
+      "/audio/surprise/surprise1.mp3",
+      "/audio/surprise/surprise2.mp3",
+    ],
   };
 
   const stableEmotion = useMemo(() => {
@@ -150,10 +183,75 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  const playTrack = (src) => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+
+    const audio = new Audio(src);
+    audio.volume = 0.6;
+    audioRef.current = audio;
+
+    audio.play().catch(() => {
+      console.log("Waiting for user interaction to enable audio");
+    });
+
+    audio.onended = () => {
+      handleTrackEnd();
+    };
+  };
+
+  const handleTrackEnd = () => {
+    // If emotion changed mid-track, switch playlist now
+    if (pendingEmotionRef.current) {
+      const newEmotion = pendingEmotionRef.current;
+      pendingEmotionRef.current = null;
+
+      currentPlaylistRef.current = emotionPlaylists[newEmotion];
+      currentTrackIndexRef.current = 0;
+
+      playTrack(currentPlaylistRef.current[0]);
+      return;
+    }
+
+    // Otherwise continue same playlist
+    currentTrackIndexRef.current =
+      (currentTrackIndexRef.current + 1) %
+      currentPlaylistRef.current.length;
+
+    playTrack(currentPlaylistRef.current[currentTrackIndexRef.current]);
+  };
+
+  useEffect(() => {
+    if (!stableEmotion) return;
+
+    const newPlaylist = emotionPlaylists[stableEmotion];
+    if (!newPlaylist) return;
+
+    // First time ever
+    if (!currentPlaylistRef.current.length) {
+      currentPlaylistRef.current = newPlaylist;
+      currentTrackIndexRef.current = 0;
+      playTrack(newPlaylist[0]);
+      return;
+    }
+
+    // Same emotion → do nothing
+    if (currentPlaylistRef.current === newPlaylist) return;
+
+    // Emotion changed mid-song → queue for later
+    pendingEmotionRef.current = stableEmotion;
+
+  }, [stableEmotion]);
+
   return (
     <div style={{ padding: "20px" }}>
       <h1>AmeLog 🎵</h1>
       <p>Real-time emotion sampling</p>
+
+      <div onClick={() => audioRef.current?.play()} style={{ cursor: "pointer" }}>
+        <small>Click anywhere once to enable adaptive audio</small>
+      </div>
 
       <video
         ref={videoRef}
