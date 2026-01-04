@@ -9,11 +9,16 @@ function App() {
 
   const EMOTION_WINDOW = 5;
   const [emotionHistory, setEmotionHistory] = useState([]);
+  const CONFIDENCE_THRESHOLD = 0.5;
 
   const audioRef = useRef(null);
   const currentPlaylistRef = useRef([]);
   const currentTrackIndexRef = useRef(0);
   const pendingEmotionRef = useRef(null);
+
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [manualEmotion, setManualEmotion] = useState(null);
+  const manualOverrideRef = useRef(false);
 
   const emotionToMusicMap = {
     Happy: {
@@ -159,11 +164,16 @@ function App() {
       const data = await response.json();
 
       if (data.emotion) {
-        setEmotionHistory(prev => {
-          const updated = [...prev, data.emotion];
-          if (updated.length > EMOTION_WINDOW) updated.shift();
-          return updated;
-        });
+        if (data.confidence >= CONFIDENCE_THRESHOLD) {
+          setEmotionHistory(prev => {
+            const updated = [...prev, data.emotion];
+            if (updated.length > EMOTION_WINDOW) updated.shift();
+            return updated;
+          });
+        }
+        else {
+          addEmotionToBuffer("Neutral");
+        }
       }
     } catch (error) {
       console.error("Error calling backend:", error);
@@ -202,6 +212,9 @@ function App() {
   };
 
   const handleTrackEnd = () => {
+    manualOverrideRef.current = false;
+    setManualEmotion(null);
+
     // If emotion changed mid-track, switch playlist now
     if (pendingEmotionRef.current) {
       const newEmotion = pendingEmotionRef.current;
@@ -223,6 +236,7 @@ function App() {
   };
 
   useEffect(() => {
+    if (manualOverrideRef.current) return;
     if (!stableEmotion) return;
 
     const newPlaylist = emotionPlaylists[stableEmotion];
@@ -243,6 +257,73 @@ function App() {
     pendingEmotionRef.current = stableEmotion;
 
   }, [stableEmotion]);
+
+  const togglePlayPause = () => {
+    if (!audioRef.current) return;
+
+    if (audioRef.current.paused) {
+      audioRef.current.play();
+      setIsPlaying(true);
+    } else {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    }
+  };
+
+  const playNextTrack = () => {
+    manualOverrideRef.current = true;
+
+    currentTrackIndexRef.current =
+      (currentTrackIndexRef.current + 1) %
+      currentPlaylistRef.current.length;
+
+    playTrack(currentPlaylistRef.current[currentTrackIndexRef.current]);
+  };
+
+  const playPrevTrack = () => {
+    manualOverrideRef.current = true;
+
+    currentTrackIndexRef.current =
+      (currentTrackIndexRef.current - 1 + currentPlaylistRef.current.length) %
+      currentPlaylistRef.current.length;
+
+    playTrack(currentPlaylistRef.current[currentTrackIndexRef.current]);
+  };
+
+  const switchEmotionManually = (emotion) => {
+    // AUTO MODE
+    if (emotion === "Auto") {
+      manualOverrideRef.current = false;
+      setManualEmotion(null);
+
+      // decide emotion NOW
+      const autoEmotion = stableEmotion;
+      const newPlaylist = emotionPlaylists[autoEmotion];
+
+      if (
+        newPlaylist &&
+        currentPlaylistRef.current !== newPlaylist
+      ) {
+        currentPlaylistRef.current = newPlaylist;
+        currentTrackIndexRef.current = 0;
+        playTrack(newPlaylist[0]);
+      }
+      return;
+    }
+    
+    // MANUAL MODE
+    manualOverrideRef.current = true;
+    setManualEmotion(emotion);
+    setEmotionHistory([emotion]); // seed buffer with manual emotion
+
+    const playlist = emotionPlaylists[emotion];
+    if (!playlist) return;
+
+    currentPlaylistRef.current = playlist;
+    currentTrackIndexRef.current = 0;
+
+    playTrack(playlist[0]);
+  };
 
   return (
     <div style={{ padding: "20px" }}>
@@ -289,6 +370,50 @@ function App() {
             <p style={{ fontStyle: "italic" }}>{musicContext.description}</p>
           </div>
         )}
+      </div>
+      <div style={{
+        marginTop: "20px",
+        padding: "16px",
+        border: "1px solid #ddd",
+        borderRadius: "12px",
+        maxWidth: "420px"
+      }}>
+        <h3>🎛 Controls (Test)</h3>
+
+        {/* Playback controls */}
+        <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
+          <button onClick={playPrevTrack}>⏮ Prev</button>
+
+          <button onClick={togglePlayPause}>
+            {isPlaying ? "⏸ Pause" : "▷ Play"}
+          </button>
+
+          <button onClick={playNextTrack}>⏭ Next</button>
+        </div>
+
+        {/* Manual emotion override */}
+        <div>
+          <p style={{ marginBottom: "6px" }}>🎭 Switch Emotion</p>
+
+          <div style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "8px"
+          }}>
+            {["Happy", "Sad", "Angry", "Fear", "Surprise", "Neutral", "Auto"].map(emotion => (
+              <button
+                key={emotion}
+                onClick={() => switchEmotionManually(emotion)}
+                style={{
+                  padding: "6px 10px",
+                  fontSize: "12px"
+                }}
+              >
+                {emotion}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
