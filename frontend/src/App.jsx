@@ -87,6 +87,33 @@ function App() {
     ],
   };
 
+  const emotionThemes = {
+    Happy: {
+      gradient: "linear-gradient(120deg, #fffefdff, #FFAFCC, #d00087ff)",
+      glow: "#FFAFCC",
+    },
+    Sad: {
+      gradient: "linear-gradient(120deg, #1E3C72, #2A5298, #1C1C3C)",
+      glow: "#2A5298",
+    },
+    Angry: {
+      gradient: "linear-gradient(120deg, #3A0F0F, #7A1C1C, #1A0A0A)",
+      glow: "#7A1C1C",
+    },
+    Fear: {
+      gradient: "linear-gradient(120deg, #2C2C54, #474787, #1B1B2F)",
+      glow: "#474787",
+    },
+    Surprise: {
+      gradient: "linear-gradient(120deg, #FBC531, #E1B12C, #f3f4f2ff)",
+      glow: "#FBC531",
+    },
+    Neutral: {
+      gradient: "linear-gradient(120deg, #E0E0E0, #6ae4f9ff, #EAEAEA)",
+      glow: "#6d6d6dff",
+    },
+  };
+
   const stableEmotion = useMemo(() => {
     if (emotionHistory.length === 0) return "—";
 
@@ -99,6 +126,8 @@ function App() {
       counts[a] > counts[b] ? a : b
     );
   }, [emotionHistory]);
+
+  const theme = emotionThemes[stableEmotion] || emotionThemes.Neutral;
 
   const musicContext = emotionToMusicMap[stableEmotion] || null;
 
@@ -172,7 +201,11 @@ function App() {
           });
         }
         else {
-          addEmotionToBuffer("Neutral");
+          setEmotionHistory(prev => {
+            const updated = [...prev, "Neutral"];
+            if (updated.length > EMOTION_WINDOW) updated.shift();
+            return updated;
+          });
         }
       }
     } catch (error) {
@@ -326,12 +359,48 @@ function App() {
   };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>AmeLog 🎵</h1>
-      <p>Real-time emotion sampling</p>
+    <div className="app-bg"
+    style={{ background: theme.gradient, padding: "20px", alignItems: "center", textAlign: "center" }}>
+      
+      <div style={{
+        marginBottom: "20px"
+      }}>
+        <h1 style={{
+          marginBottom: "8px",
+          fontSize: "3.5rem",
+          fontWeight: "700",
+          letterSpacing: "2px",
+          color: "white",
+          textShadow: `0 0 10px ${theme.glow}88`
+        }}>
+          AmeLog ♬
+        </h1>
+        <p style={{ 
+          color: "rgba(249, 249, 249, 0.85)", 
+          fontSize: "1.2rem", 
+          marginTop: "0",
+          fontWeight: "500",
+          letterSpacing: "1px"
+        }}>
+          Real-time emotion sampling
+        </p>
+      </div>
 
-      <div onClick={() => audioRef.current?.play()} style={{ cursor: "pointer" }}>
-        <small>Click anywhere once to enable adaptive audio</small>
+      <div 
+        onClick={() => audioRef.current?.play()} 
+        style={{ 
+          cursor: "pointer",
+          marginBottom: "30px"
+        }}
+      >
+        <small style={{ 
+          color: "aliceblue", 
+          fontSize: "0.9rem",
+          fontWeight: "600",
+          letterSpacing: "0.5px"
+        }}>
+          Click anywhere to enable adaptive audio
+        </small>
       </div>
 
       <video
@@ -339,74 +408,193 @@ function App() {
         autoPlay
         playsInline
         style={{
-          width: "400px",
-          borderRadius: "12px",
-          border: "2px solid #ccc",
-          transform: "scaleX(-1)",
+          display: "none",
         }}
       />
-
       <canvas ref={canvasRef} style={{ display: "none" }} />
 
-      {snapshot && (
-        <div style={{ marginTop: "16px" }}>
-          <h3>Sampled Frame</h3>
-          <img
-            src={snapshot}
-            alt="Snapshot"
-            style={{ width: "200px", borderRadius: "8px"}}
-          />
-        </div>
-      )}
-
-      <div style={{ marginTop: "20px" }}>
-        <h2>Emotion: {stableEmotion}</h2>
-        {musicContext && (
-          <div style={{ marginTop: "20px" }}>
-            <h3>🎵 Music Recommendation</h3>
-            <p><strong>Mood:</strong> {musicContext.mood}</p>
-            <p><strong>Genres:</strong> {musicContext.genres.join(", ")}</p>
-            <p><strong>Tempo:</strong> {musicContext.tempo}</p>
-            <p style={{ fontStyle: "italic" }}>{musicContext.description}</p>
-          </div>
-        )}
-      </div>
-      <div style={{
-        marginTop: "20px",
-        padding: "16px",
-        border: "1px solid #ddd",
-        borderRadius: "12px",
-        maxWidth: "420px"
+      <div style={{ 
+        marginTop: "30px",
+        marginBottom: "30px"
       }}>
-        <h3>🎛 Controls (Test)</h3>
+        <h2
+          style={{
+            color: theme.glow,
+            letterSpacing: "8px",
+            transition: "all 0.8s ease",
+            fontSize: "5rem",
+            fontWeight: "800",
+            margin: "0",
+            textTransform: "uppercase",
+            textShadow: `0 0 5px ${theme.glow}, 0 0 15px ${theme.glow}`
+          }}
+        >
+          {stableEmotion}
+        </h2>
+      </div>
+
+      <style>
+        {`
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+          }
+        `}
+      </style>
+      <div style={{
+        margin: "20px auto",
+        padding: "24px",
+        background: "rgba(255, 255, 255, 0.05)",
+        backdropFilter: "blur(10px)",
+        borderRadius: "20px",
+        maxWidth: "420px",
+        alignSelf: "center",
+        boxShadow: `0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 20px ${theme.glow}33`,
+      }}>
 
         {/* Playback controls */}
-        <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
-          <button onClick={playPrevTrack}>⏮ Prev</button>
+        <div style={{ display: "flex", gap: "12px", marginBottom: "20px", justifyContent: "center", alignItems: "center" }}>
+          <button 
+            onClick={playPrevTrack} 
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = theme.glow;
+              e.currentTarget.style.borderColor = theme.glow;
+              e.currentTarget.style.transform = "scale(1.1)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.borderColor = theme.glow;
+              e.currentTarget.style.transform = "scale(1)";
+            }}
+            style={{
+              width: "44px", 
+              height: "44px", 
+              border: `2px solid ${theme.glow}`, 
+              borderRadius: "50%",
+              background: "transparent",
+              color: "white",
+              cursor: "pointer",
+              fontSize: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.3s ease",
+              boxShadow: `0 0 10px ${theme.glow}44`
+            }}
+          >
+            ⏮
+          </button>
 
-          <button onClick={togglePlayPause}>
+          <button 
+            onClick={togglePlayPause} 
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = theme.glow;
+              e.currentTarget.style.borderColor = theme.glow;
+              e.currentTarget.style.transform = "scale(1.05)";
+              e.currentTarget.style.boxShadow = `0 0 20px ${theme.glow}`;
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+              e.currentTarget.style.borderColor = theme.glow;
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.boxShadow = `0 0 15px ${theme.glow}66`;
+            }}
+            style={{ 
+              minWidth: "120px", 
+              minHeight: "50px", 
+              borderRadius: "25px", 
+              border: `2px solid ${theme.glow}`,
+              background: "rgba(255, 255, 255, 0.1)",
+              color: "white",
+              fontSize: "16px",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+              boxShadow: `0 0 15px ${theme.glow}66`,
+              letterSpacing: "0.5px"
+            }}
+          >
             {isPlaying ? "⏸ Pause" : "▷ Play"}
           </button>
 
-          <button onClick={playNextTrack}>⏭ Next</button>
+          <button 
+            onClick={playNextTrack} 
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = theme.glow;
+              e.currentTarget.style.borderColor = theme.glow;
+              e.currentTarget.style.transform = "scale(1.1)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.borderColor = theme.glow;
+              e.currentTarget.style.transform = "scale(1)";
+            }}
+            style={{
+              width: "44px", 
+              height: "44px", 
+              border: `2px solid ${theme.glow}`, 
+              borderRadius: "50%",
+              background: "transparent",
+              color: "white",
+              cursor: "pointer",
+              fontSize: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.3s ease",
+              boxShadow: `0 0 10px ${theme.glow}44`
+            }}
+          >
+            ⏭
+          </button>
         </div>
 
         {/* Manual emotion override */}
         <div>
-          <p style={{ marginBottom: "6px" }}>🎭 Switch Emotion</p>
+          <p style={{ 
+            marginBottom: "12px", 
+            color: "aliceblue", 
+            fontSize: "14px",
+            fontWeight: "500",
+            letterSpacing: "1px",
+            textTransform: "uppercase"
+          }}>
+            Manual Selection
+          </p>
 
           <div style={{
             display: "flex",
             flexWrap: "wrap",
-            gap: "8px"
+            gap: "8px",
+            justifyContent: "center"
           }}>
             {["Happy", "Sad", "Angry", "Fear", "Surprise", "Neutral", "Auto"].map(emotion => (
               <button
                 key={emotion}
                 onClick={() => switchEmotionManually(emotion)}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = theme.glow;
+                  e.currentTarget.style.borderColor = theme.glow;
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = `0 4px 12px ${theme.glow}88`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
+                  e.currentTarget.style.borderColor = `${theme.glow}88`;
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
                 style={{
-                  padding: "6px 10px",
-                  fontSize: "12px"
+                  padding: "10px 18px",
+                  fontSize: "13px",
+                  fontWeight: "500",
+                  border: `1.5px solid ${theme.glow}88`,
+                  borderRadius: "12px",
+                  background: "rgba(255, 255, 255, 0.08)",
+                  color: "white",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  letterSpacing: "0.5px"
                 }}
               >
                 {emotion}
