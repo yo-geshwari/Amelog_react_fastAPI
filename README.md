@@ -93,3 +93,12 @@ Then open the local React URL in your browser and allow camera access.
 Yogeshwari Kanwar
 
 B.Tech CSE — Minor Project
+
+##
+
+Thanks for checking out AmeLog 💛
+This project was built with curiosity, persistence, and a lot of debugging — and it represents my interest in combining technology, emotion, and art.
+
+Feel free to explore, experiment, or build on top of it ✨
+
+Made with 🎧, ☕, and a love for learning.
