@@ -90,7 +90,7 @@ function App() {
   const emotionThemes = {
     Happy: {
       gradient: "linear-gradient(120deg, #fffefdff, #FFAFCC, #d00087ff)",
-      glow: "#FFAFCC",
+      glow: "#f53f81ff",
     },
     Sad: {
       gradient: "linear-gradient(120deg, #1E3C72, #2A5298, #1C1C3C)",
@@ -98,15 +98,15 @@ function App() {
     },
     Angry: {
       gradient: "linear-gradient(120deg, #3A0F0F, #7A1C1C, #1A0A0A)",
-      glow: "#7A1C1C",
+      glow: "#ff0000ff",
     },
     Fear: {
       gradient: "linear-gradient(120deg, #2C2C54, #474787, #1B1B2F)",
-      glow: "#474787",
+      glow: "#c2c2c2ff",
     },
     Surprise: {
       gradient: "linear-gradient(120deg, #FBC531, #E1B12C, #f3f4f2ff)",
-      glow: "#FBC531",
+      glow: "#ffecb6ff",
     },
     Neutral: {
       gradient: "linear-gradient(120deg, #E0E0E0, #6ae4f9ff, #EAEAEA)",
